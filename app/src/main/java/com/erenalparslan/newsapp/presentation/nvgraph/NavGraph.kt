@@ -18,8 +18,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navigation
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.erenalparslan.newsapp.presentation.home.HomeViewModel
 import com.erenalparslan.newsapp.presentation.introduction.IntroductionScreen
 import com.erenalparslan.newsapp.presentation.introduction.IntroductionViewModel
+import com.loc.newsapp.presentation.home.HomeScreen
+import com.loc.newsapp.presentation.home.HomeState
 import com.loc.newsapp.presentation.navgraph.Route
 
 
@@ -47,9 +51,16 @@ fun NavGraph(
             composable(route = Route.NewsNavigatorScreen.route) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
                     verticalArrangement = Arrangement.Center
                 ) {
+                    val viewModel :HomeViewModel= hiltViewModel()
+                    var articles=viewModel.news.collectAsLazyPagingItems()
+                    HomeScreen(articles = articles, navigateToSearch = {  }) {
+                        
+                    }
                     Text(text = "Eren", Modifier.size(32.dp), color = Color.Black)
                 }
 
