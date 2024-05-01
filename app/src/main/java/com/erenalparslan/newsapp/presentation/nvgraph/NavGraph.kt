@@ -22,9 +22,11 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import com.erenalparslan.newsapp.presentation.home.HomeViewModel
 import com.erenalparslan.newsapp.presentation.introduction.IntroductionScreen
 import com.erenalparslan.newsapp.presentation.introduction.IntroductionViewModel
+import com.erenalparslan.newsapp.presentation.search.SearchViewModel
 import com.loc.newsapp.presentation.home.HomeScreen
 import com.loc.newsapp.presentation.home.HomeState
 import com.loc.newsapp.presentation.navgraph.Route
+import com.loc.newsapp.presentation.search.SearchScreen
 
 
 @Composable
@@ -56,12 +58,11 @@ fun NavGraph(
                         .background(MaterialTheme.colorScheme.background),
                     verticalArrangement = Arrangement.Center
                 ) {
-                    val viewModel :HomeViewModel= hiltViewModel()
-                    var articles=viewModel.news.collectAsLazyPagingItems()
-                    HomeScreen(articles = articles, navigateToSearch = {  }) {
-                        
-                    }
-                    Text(text = "Eren", Modifier.size(32.dp), color = Color.Black)
+                    val viewModel :SearchViewModel= hiltViewModel()
+                    var state=viewModel.state.value
+                  SearchScreen(state = state, event = viewModel::onEvent, navigateToDetails = {})
+
+
                 }
 
             }

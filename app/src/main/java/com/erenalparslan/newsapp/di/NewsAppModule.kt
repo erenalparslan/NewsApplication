@@ -11,6 +11,7 @@ import com.erenalparslan.newsapp.domain.usecase.app_enty.ReadAppEntryUseCase
 import com.erenalparslan.newsapp.domain.usecase.app_enty.SaveAppEntryUseCase
 import com.erenalparslan.newsapp.domain.usecase.news.GetNewsUseCase
 import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
+import com.erenalparslan.newsapp.domain.usecase.news.SearchNewsUseCase
 import com.erenalparslan.newsapp.util.Constans.BASE_URL
 import dagger.Module
 import dagger.Provides
@@ -67,6 +68,7 @@ object NewsAppModule {
     ): NewsUseCases {
         return NewsUseCases(
             getNews = GetNewsUseCase(newsRepository),
+            searchNewsUseCase = SearchNewsUseCase(newsRepository)
         )
     }
 
