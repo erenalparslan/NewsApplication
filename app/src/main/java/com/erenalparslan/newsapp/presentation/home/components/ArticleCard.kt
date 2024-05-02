@@ -26,13 +26,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.erenalparslan.newsapp.Dimens.ArticleCardSize
-import com.erenalparslan.newsapp.Dimens.ExtraSmallPadding
-import com.erenalparslan.newsapp.Dimens.ExtraSmallPadding2
-import com.erenalparslan.newsapp.Dimens.SmallIconSize
 import com.erenalparslan.newsapp.R
 import com.erenalparslan.newsapp.domain.model.Article
 import com.erenalparslan.newsapp.domain.model.Source
+import com.erenalparslan.newsapp.presentation.Dimens.ArticleCardSize
+import com.erenalparslan.newsapp.presentation.Dimens.ExtraSmallPadding
+import com.erenalparslan.newsapp.presentation.Dimens.ExtraSmallPadding2
+import com.erenalparslan.newsapp.presentation.Dimens.SmallIconSize
 import com.erenalparslan.newsapp.ui.theme.NewsAppTheme
 
 @Composable

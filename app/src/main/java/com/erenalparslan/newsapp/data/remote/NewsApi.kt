@@ -1,7 +1,7 @@
 package com.erenalparslan.newsapp.data.remote
 
-import com.erenalparslan.newsapp.util.Constans.API_KEY
-import com.loc.newsapp.data.remote.dto.NewsResponse
+import com.erenalparslan.newsapp.data.remote.dto.NewsResponse
+import com.erenalparslan.newsapp.util.Constants.API_KEY
 import retrofit2.http.GET
 import retrofit2.http.Query
 

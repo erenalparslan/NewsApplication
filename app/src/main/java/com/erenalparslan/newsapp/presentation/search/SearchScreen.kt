@@ -1,20 +1,20 @@
-package com.loc.newsapp.presentation.search
+package com.erenalparslan.newsapp.presentation.search
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.paging.compose.collectAsLazyPagingItems
-import com.erenalparslan.newsapp.Dimens.MediumPadding1
 import com.erenalparslan.newsapp.domain.model.Article
+import com.erenalparslan.newsapp.presentation.Dimens.MediumPadding1
 import com.erenalparslan.newsapp.presentation.common.ArticlesList
 import com.erenalparslan.newsapp.presentation.common.SearchBar
-import com.erenalparslan.newsapp.presentation.search.SearchState
 
 @Composable
 fun SearchScreen(
@@ -26,9 +26,7 @@ fun SearchScreen(
     Column(
         modifier = Modifier
             .padding(top = MediumPadding1, start = MediumPadding1, end = MediumPadding1)
-            .fillMaxSize()
-            .statusBarsPadding(),
-        verticalArrangement = Arrangement.Top
+            .statusBarsPadding()
     ) {
         SearchBar(
             text = state.searchQuery,

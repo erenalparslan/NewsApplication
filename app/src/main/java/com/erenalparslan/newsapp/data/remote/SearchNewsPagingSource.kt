@@ -3,6 +3,7 @@ package com.erenalparslan.newsapp.data.remote
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import com.erenalparslan.newsapp.domain.model.Article
+import java.lang.Exception
 
 class SearchNewsPagingSource(
     private val api: NewsApi,

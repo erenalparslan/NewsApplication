@@ -1,4 +1,4 @@
-package com.loc.newsapp.presentation.home
+package com.erenalparslan.newsapp.presentation.home
 
 
 data class HomeState(

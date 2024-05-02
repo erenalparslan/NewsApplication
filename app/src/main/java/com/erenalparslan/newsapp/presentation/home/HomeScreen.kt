@@ -1,4 +1,4 @@
-package com.loc.newsapp.presentation.home
+package com.erenalparslan.newsapp.presentation.home
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -21,12 +21,14 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.paging.compose.LazyPagingItems
-import com.erenalparslan.newsapp.Dimens.MediumPadding1
 import com.erenalparslan.newsapp.R
 import com.erenalparslan.newsapp.domain.model.Article
+import com.erenalparslan.newsapp.presentation.Dimens.MediumPadding1
 import com.erenalparslan.newsapp.presentation.common.ArticlesList
 import com.erenalparslan.newsapp.presentation.common.SearchBar
+import com.erenalparslan.newsapp.presentation.navgraph.Route
 
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -66,7 +68,7 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(MediumPadding1))
 
-       SearchBar(
+        SearchBar(
             modifier = Modifier
                 .padding(horizontal = MediumPadding1)
                 .fillMaxWidth(),

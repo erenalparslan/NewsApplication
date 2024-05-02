@@ -5,14 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
-import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
-import com.loc.newsapp.presentation.search.SearchEvent
+import com.erenalparslan.newsapp.domain.usecases.news.SearchNews
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val newsUseCases: NewsUseCases
+    private val searchNewsUseCase: SearchNews
 ) : ViewModel() {
 
     private var _state = mutableStateOf(SearchState())
@@ -32,7 +31,7 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun searchNews() {
-        val articles = newsUseCases.searchNewsUseCase(
+        val articles = searchNewsUseCase(
             searchQuery = _state.value.searchQuery,
             sources = listOf("bbc-news", "abc-news", "al-jazeera-english")
         ).cachedIn(viewModelScope)

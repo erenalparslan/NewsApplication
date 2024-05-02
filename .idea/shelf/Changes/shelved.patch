@@ -1,0 +1,2192 @@
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/LocalManager.kt
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/LocalManager.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/LocalManager.kt
+deleted file mode 100644
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/LocalManager.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ /dev/null	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
+@@ -1,10 +0,0 @@
+-package com.erenalparslan.newsapp.domain
+-
+-import kotlinx.coroutines.flow.Flow
+-
+-interface LocalManager {
+-
+-    suspend fun saveUserEntry()
+-
+-    fun readUserEntry(): Flow<Boolean>
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/LocalManagerImpl.kt
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/LocalManagerImpl.kt b/app/src/main/java/com/erenalparslan/newsapp/data/LocalManagerImpl.kt
+deleted file mode 100644
+--- a/app/src/main/java/com/erenalparslan/newsapp/data/LocalManagerImpl.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ /dev/null	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
+@@ -1,36 +0,0 @@
+-package com.erenalparslan.newsapp.data
+-
+-import android.content.Context
+-import androidx.datastore.core.DataStore
+-import androidx.datastore.preferences.core.Preferences
+-import androidx.datastore.preferences.core.booleanPreferencesKey
+-import androidx.datastore.preferences.core.edit
+-import androidx.datastore.preferences.preferencesDataStore
+-import com.erenalparslan.newsapp.domain.LocalManager
+-import com.erenalparslan.newsapp.util.Constans
+-import com.erenalparslan.newsapp.util.Constans.USER_SETTINGS
+-import kotlinx.coroutines.flow.Flow
+-import kotlinx.coroutines.flow.map
+-
+-
+-class LocalManagerImpl(private val context: Context) : LocalManager {
+-
+-    override suspend fun saveUserEntry() {
+-        context.dataStore.edit { settings ->
+-            settings[PreferencesKey.APP_ENTRY] = true
+-        }
+-    }
+-
+-    override fun readUserEntry(): Flow<Boolean> {
+-        return context.dataStore.data.map { preferences ->
+-            preferences[PreferencesKey.APP_ENTRY] ?: false
+-        }
+-    }
+-
+-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = USER_SETTINGS)
+-
+-    private object PreferencesKey {
+-        val APP_ENTRY = booleanPreferencesKey(name = Constans.APP_ENTRY)
+-    }
+-
+-}
+Index: app/src/main/java/com/erenalparslan/newsapp/di/NewsAppModule.kt
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/di/NewsAppModule.kt b/app/src/main/java/com/erenalparslan/newsapp/di/NewsAppModule.kt
+deleted file mode 100644
+--- a/app/src/main/java/com/erenalparslan/newsapp/di/NewsAppModule.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ /dev/null	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
+@@ -1,76 +0,0 @@
+-package com.erenalparslan.newsapp.di
+-
+-import android.app.Application
+-import com.erenalparslan.newsapp.data.LocalManagerImpl
+-import com.erenalparslan.newsapp.data.remote.NewsApi
+-import com.erenalparslan.newsapp.data.repository.NewsRepositoryImpl
+-import com.erenalparslan.newsapp.domain.LocalManager
+-import com.erenalparslan.newsapp.domain.repository.NewsRepository
+-import com.erenalparslan.newsapp.domain.usecase.app_enty.AppEntryUseCases
+-import com.erenalparslan.newsapp.domain.usecase.app_enty.ReadAppEntryUseCase
+-import com.erenalparslan.newsapp.domain.usecase.app_enty.SaveAppEntryUseCase
+-import com.erenalparslan.newsapp.domain.usecase.news.GetNewsUseCase
+-import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
+-import com.erenalparslan.newsapp.domain.usecase.news.SearchNewsUseCase
+-import com.erenalparslan.newsapp.util.Constans.BASE_URL
+-import dagger.Module
+-import dagger.Provides
+-import dagger.hilt.InstallIn
+-import dagger.hilt.components.SingletonComponent
+-import retrofit2.Retrofit
+-import retrofit2.converter.gson.GsonConverterFactory
+-import javax.inject.Singleton
+-
+-@Module
+-@InstallIn(SingletonComponent::class)
+-object NewsAppModule {
+-
+-    @Provides
+-    @Singleton
+-    fun provideLocalManager(
+-        application: Application
+-    ): LocalManager = LocalManagerImpl(application)
+-
+-    @Provides
+-    @Singleton
+-    fun provideEntryUseCase(localManager: LocalManager): AppEntryUseCases {
+-        return AppEntryUseCases(
+-            ReadAppEntryUseCase(localManager = localManager),
+-            SaveAppEntryUseCase(localManager = localManager)
+-        )
+-
+-    }
+-
+-
+-    @Provides
+-    @Singleton
+-    fun provideApiInstance(): NewsApi {
+-        return Retrofit
+-            .Builder()
+-            .baseUrl(BASE_URL)
+-            .addConverterFactory(GsonConverterFactory.create())
+-            .build()
+-            .create(NewsApi::class.java)
+-    }
+-
+-    @Provides
+-    @Singleton
+-    fun provideNewsRepository(
+-        newsApi: NewsApi,
+-    ): NewsRepository {
+-        return NewsRepositoryImpl(newsApi)
+-    }
+-
+-    @Provides
+-    @Singleton
+-    fun provideNewsUseCases(
+-        newsRepository: NewsRepository
+-    ): NewsUseCases {
+-        return NewsUseCases(
+-            getNews = GetNewsUseCase(newsRepository),
+-            searchNewsUseCase = SearchNewsUseCase(newsRepository)
+-        )
+-    }
+-
+-
+-}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.mainActivity\n\nimport android.os.Bundle\nimport androidx.activity.ComponentActivity\nimport androidx.activity.compose.setContent\nimport androidx.activity.viewModels\nimport androidx.compose.foundation.background\nimport androidx.compose.foundation.isSystemInDarkTheme\nimport androidx.compose.foundation.layout.Box\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.material3.MaterialTheme\nimport androidx.compose.runtime.SideEffect\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.graphics.Color\nimport androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen\nimport androidx.core.view.WindowCompat\nimport com.erenalparslan.newsapp.presentation.nvgraph.NavGraph\nimport com.erenalparslan.newsapp.ui.theme.NewsAppTheme\nimport com.google.accompanist.systemuicontroller.rememberSystemUiController\nimport dagger.hilt.android.AndroidEntryPoint\n\n@AndroidEntryPoint\nclass MainActivity : ComponentActivity() {\n\n    private val viewmodel by viewModels<MainActivityViewModel>()\n\n    override fun onCreate(savedInstanceState: Bundle?) {\n        super.onCreate(savedInstanceState)\n        WindowCompat.setDecorFitsSystemWindows(window,false)\n        installSplashScreen().apply {\n            setKeepOnScreenCondition(condition = { viewmodel.splashScreenCondition })\n        }\n        setContent {\n            NewsAppTheme {\n\n                var isDarkTheme= isSystemInDarkTheme()\n                var systemUiController= rememberSystemUiController()\n\n                SideEffect{\n                    systemUiController.setSystemBarsColor(\n                        color = Color.Transparent,\n                        darkIcons = !isDarkTheme\n                    )\n                }\n\n                // A surface container using the 'background' color from the theme\n\n                    Box(modifier = Modifier\n                        .background(MaterialTheme.colorScheme.background)\n                        .fillMaxSize()){\n                        NavGraph(startDestination = viewmodel.startDestination)\n                    }\n            }\n        }\n    }\n}\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivity.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivity.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivity.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivity.kt	(date 1714603581018)
+@@ -22,34 +22,28 @@
+ @AndroidEntryPoint
+ class MainActivity : ComponentActivity() {
+ 
+-    private val viewmodel by viewModels<MainActivityViewModel>()
++    private val viewModel by viewModels<MainActivityViewModel>()
+ 
+     override fun onCreate(savedInstanceState: Bundle?) {
+         super.onCreate(savedInstanceState)
+         WindowCompat.setDecorFitsSystemWindows(window,false)
+         installSplashScreen().apply {
+-            setKeepOnScreenCondition(condition = { viewmodel.splashScreenCondition })
++            setKeepOnScreenCondition(condition = { viewModel.splashScreenCondition })
+         }
+         setContent {
+-            NewsAppTheme {
+-
+-                var isDarkTheme= isSystemInDarkTheme()
+-                var systemUiController= rememberSystemUiController()
+-
+-                SideEffect{
+-                    systemUiController.setSystemBarsColor(
++            NewsAppTheme(dynamicColor = false) {
++                val isSystemInDarkMode = isSystemInDarkTheme()
++                val systemUiColor = rememberSystemUiController()
++                SideEffect {
++                    systemUiColor.setSystemBarsColor(
+                         color = Color.Transparent,
+-                        darkIcons = !isDarkTheme
++                        darkIcons = !isSystemInDarkMode
+                     )
+                 }
+-
+-                // A surface container using the 'background' color from the theme
+-
+-                    Box(modifier = Modifier
+-                        .background(MaterialTheme.colorScheme.background)
+-                        .fillMaxSize()){
+-                        NavGraph(startDestination = viewmodel.startDestination)
+-                    }
++                //Add fillMaxSize()
++                Box(modifier = Modifier.background(MaterialTheme.colorScheme.background).fillMaxSize()) {
++                    NavGraph(startDestination = viewModel.startDestination.value)
++                }
+             }
+         }
+     }
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.loc.newsapp.presentation.home\n\nimport androidx.compose.foundation.ExperimentalFoundationApi\nimport androidx.compose.foundation.Image\nimport androidx.compose.foundation.basicMarquee\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Spacer\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.fillMaxWidth\nimport androidx.compose.foundation.layout.height\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.layout.statusBarsPadding\nimport androidx.compose.foundation.layout.width\nimport androidx.compose.material3.Text\nimport androidx.compose.runtime.Composable\nimport androidx.compose.runtime.derivedStateOf\nimport androidx.compose.runtime.getValue\nimport androidx.compose.runtime.remember\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.res.colorResource\nimport androidx.compose.ui.res.painterResource\nimport androidx.compose.ui.unit.dp\nimport androidx.compose.ui.unit.sp\nimport androidx.paging.compose.LazyPagingItems\nimport com.erenalparslan.newsapp.Dimens.MediumPadding1\nimport com.erenalparslan.newsapp.R\nimport com.erenalparslan.newsapp.domain.model.Article\nimport com.erenalparslan.newsapp.presentation.common.ArticlesList\nimport com.erenalparslan.newsapp.presentation.common.SearchBar\n\n\n@OptIn(ExperimentalFoundationApi::class)\n@Composable\nfun HomeScreen(\n    articles: LazyPagingItems<Article>,\n    navigateToSearch: () -> Unit,\n    navigateToDetails: (Article) -> Unit\n) {\n\n    val titles by remember {\n        derivedStateOf {\n            if (articles.itemCount > 10) {\n                articles.itemSnapshotList.items\n                    .slice(IntRange(start = 0, endInclusive = 9))\n                    .joinToString(separator = \" \\uD83D\\uDFE5 \") { it.title }\n            } else {\n                \"\"\n            }\n        }\n    }\n\n    Column(\n        modifier = Modifier\n            .fillMaxSize()\n            .padding(top = MediumPadding1)\n            .statusBarsPadding()\n    ) {\n        Image(\n            painter = painterResource(id = R.drawable.ic_logo),\n            contentDescription = null,\n            modifier = Modifier\n                .width(150.dp)\n                .height(30.dp)\n                .padding(horizontal = MediumPadding1)\n        )\n\n        Spacer(modifier = Modifier.height(MediumPadding1))\n\n       SearchBar(\n            modifier = Modifier\n                .padding(horizontal = MediumPadding1)\n                .fillMaxWidth(),\n            text = \"\",\n            readOnly = true,\n            onValueChange = {},\n            onSearch = {},\n            onClick = navigateToSearch\n        )\n\n        Spacer(modifier = Modifier.height(MediumPadding1))\n\n        Text(\n            text = titles, modifier = Modifier\n                .fillMaxWidth()\n                .padding(start = MediumPadding1)\n                .basicMarquee(), fontSize = 12.sp,\n            color = colorResource(id = R.color.placeholder)\n        )\n\n        Spacer(modifier = Modifier.height(MediumPadding1))\n\n        ArticlesList(\n            modifier = Modifier.padding(horizontal = MediumPadding1),\n            articles = articles,\n            onClick = navigateToDetails\n        )\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeScreen.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeScreen.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeScreen.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeScreen.kt	(date 1714603581001)
+@@ -1,4 +1,4 @@
+-package com.loc.newsapp.presentation.home
++package com.erenalparslan.newsapp.presentation.home
+ 
+ import androidx.compose.foundation.ExperimentalFoundationApi
+ import androidx.compose.foundation.Image
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.home\n\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.lifecycle.ViewModel\nimport androidx.lifecycle.viewModelScope\nimport androidx.paging.cachedIn\nimport com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases\nimport com.loc.newsapp.presentation.home.HomeState\nimport dagger.hilt.android.lifecycle.HiltViewModel\nimport javax.inject.Inject\n\n@HiltViewModel\nclass HomeViewModel @Inject constructor(\n    private val newsUseCases: NewsUseCases\n): ViewModel() {\n\n    var state = mutableStateOf(HomeState())\n        private set\n\n    val news = newsUseCases.getNews(\n        source = listOf(\"bbc-news\",\"abc-news\",\"al-jazeera-english\")\n    ).cachedIn(viewModelScope)\n\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeViewModel.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeViewModel.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeViewModel.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeViewModel.kt	(date 1714603581006)
+@@ -5,7 +5,6 @@
+ import androidx.lifecycle.viewModelScope
+ import androidx.paging.cachedIn
+ import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
+-import com.loc.newsapp.presentation.home.HomeState
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import javax.inject.Inject
+ 
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/common/ArticlesList.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.common\n\nimport androidx.compose.foundation.layout.Arrangement\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.PaddingValues\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.lazy.LazyColumn\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Modifier\nimport androidx.paging.LoadState\nimport androidx.paging.compose.LazyPagingItems\nimport com.erenalparslan.newsapp.Dimens.ExtraSmallPadding2\nimport com.erenalparslan.newsapp.Dimens.MediumPadding1\nimport com.erenalparslan.newsapp.domain.model.Article\nimport com.erenalparslan.newsapp.presentation.home.components.ArticleCard\n\n@Composable\nfun ArticlesList(\n    modifier: Modifier = Modifier,\n    articles: LazyPagingItems<Article>,\n    onClick:(Article) -> Unit\n) {\n\n    val handlePagingResult = handlePagingResult(articles)\n\n\n    if (handlePagingResult) {\n        LazyColumn(\n            modifier = modifier.fillMaxSize(),\n            verticalArrangement = Arrangement.spacedBy(MediumPadding1),\n            contentPadding = PaddingValues(all = ExtraSmallPadding2)\n        ) {\n            items(\n                count = articles.itemCount,\n            ) {\n                articles[it]?.let { article ->\n                    ArticleCard(article = article, onClick = {onClick(article)})\n                }\n            }\n        }\n    }\n}\n\n@Composable\nfun handlePagingResult(articles: LazyPagingItems<Article>): Boolean {\n    val loadState = articles.loadState\n    val error = when {\n        loadState.refresh is LoadState.Error -> loadState.refresh as LoadState.Error\n        loadState.prepend is LoadState.Error -> loadState.prepend as LoadState.Error\n        loadState.append is LoadState.Error -> loadState.append as LoadState.Error\n        else -> null\n    }\n\n    return when {\n        loadState.refresh is LoadState.Loading -> {\n            ShimmerEffect()\n            false\n        }\n\n        error != null -> {\n            EmptyScreen(error = error)\n            false\n        }\n\n        else -> {\n            true\n        }\n    }\n}\n\n@Composable\nfun ShimmerEffect() {\n    Column(verticalArrangement = Arrangement.spacedBy(MediumPadding1)){\n        repeat(10){\n            ArticleCardShimmerEffect(\n                modifier = Modifier.padding(horizontal = MediumPadding1)\n            )\n        }\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/common/ArticlesList.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/common/ArticlesList.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/common/ArticlesList.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/common/ArticlesList.kt	(date 1714603581004)
+@@ -15,6 +15,31 @@
+ import com.erenalparslan.newsapp.domain.model.Article
+ import com.erenalparslan.newsapp.presentation.home.components.ArticleCard
+ 
++@Composable
++fun ArticlesList(
++    modifier: Modifier = Modifier,
++    articles: List<Article>,
++    onClick: (Article) -> Unit
++) {
++    if (articles.isEmpty()){
++        EmptyScreen()
++    }
++    LazyColumn(
++        modifier = modifier.fillMaxSize(),
++        verticalArrangement = Arrangement.spacedBy(MediumPadding1),
++        contentPadding = PaddingValues(all = ExtraSmallPadding2)
++    ) {
++        items(
++            count = articles.size,
++        ) {
++            articles[it]?.let { article ->
++                ArticleCard(article = article, onClick = { onClick(article) })
++            }
++        }
++    }
++
++}
++
+ @Composable
+ fun ArticlesList(
+     modifier: Modifier = Modifier,
+Index: app/src/main/res/drawable/ic_back_arrow.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_back_arrow.xml b/app/src/main/res/drawable/ic_back_arrow.xml
+new file mode 100644
+--- /dev/null	(date 1688639494000)
++++ b/app/src/main/res/drawable/ic_back_arrow.xml	(date 1688639494000)
+@@ -0,0 +1,9 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="16dp"
++    android:height="16dp"
++    android:viewportWidth="16"
++    android:viewportHeight="16">
++  <path
++      android:pathData="M3.828,7H16V9H3.828L9.192,14.364L7.778,15.778L0,8L7.778,0.222L9.192,1.636L3.828,7Z"
++      android:fillColor="#B0B3B8"/>
++</vector>
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetSavedArticle.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetSavedArticle.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetSavedArticle.kt
+new file mode 100644
+--- /dev/null	(date 1714602986837)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetSavedArticle.kt	(date 1714602986837)
+@@ -0,0 +1,15 @@
++package com.erenalparslan.newsapp.domain.usecase.news
++
++import com.erenalparslan.newsapp.data.local.NewsDao
++import com.erenalparslan.newsapp.domain.model.Article
++import javax.inject.Inject
++
++class GetSavedArticle @Inject constructor(
++    private val newsDao: NewsDao
++) {
++
++    suspend operator fun invoke(url: String): Article?{
++        return newsDao.getArticle(url = url)
++    }
++
++}
+\ No newline at end of file
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\"\n    xmlns:tools=\"http://schemas.android.com/tools\">\n\n\n    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n\n    <application\n        android:name=\".NewsApp\"\n        android:allowBackup=\"true\"\n        android:dataExtractionRules=\"@xml/data_extraction_rules\"\n        android:fullBackupContent=\"@xml/backup_rules\"\n        android:icon=\"@mipmap/ic_launcher\"\n        android:label=\"@string/app_name\"\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\n        android:supportsRtl=\"true\"\n        android:theme=\"@style/Theme.NewsApp\"\n        tools:targetApi=\"31\">\n        <activity\n            android:name=\".presentation.mainActivity.MainActivity\"\n            android:exported=\"true\"\n            android:label=\"@string/app_name\"\n            android:theme=\"@style/Theme.Splash\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n\n</manifest>
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+--- a/app/src/main/AndroidManifest.xml	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/AndroidManifest.xml	(date 1714586564093)
+@@ -30,4 +30,15 @@
+         </activity>
+     </application>
+ 
++    <queries>
++        <intent>
++            <action android:name="android.intent.action.VIEW" />
++            <category android:name="android.intent.category.BROWSABLE" />
++            <data android:scheme="https" />
++        </intent>
++        <intent>
++            <action android:name="android.intent.action.SEND"/>
++        </intent>
++    </queries>
++
+ </manifest>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/model/Source.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.domain.model\n\nimport android.os.Parcelable\nimport kotlinx.parcelize.Parcelize\n\n\ndata class Source(\n    val id: String,\n    val name: String\n)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/model/Source.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/model/Source.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/model/Source.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/model/Source.kt	(date 1714587581978)
+@@ -4,7 +4,8 @@
+ import kotlinx.parcelize.Parcelize
+ 
+ 
++@Parcelize
+ data class Source(
+     val id: String,
+     val name: String
+-)
+\ No newline at end of file
++) : Parcelable
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/model/Article.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.domain.model\n\ndata class Article(\n    val author: String,\n    val content: String,\n    val description: String,\n    val publishedAt: String,\n    val source: Source,\n    val title: String,\n    val url: String,\n    val urlToImage: String\n)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/model/Article.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/model/Article.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/model/Article.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/model/Article.kt	(date 1714587581973)
+@@ -1,5 +1,12 @@
+ package com.erenalparslan.newsapp.domain.model
+ 
++import android.os.Parcelable
++import androidx.room.Entity
++import androidx.room.PrimaryKey
++import kotlinx.parcelize.Parcelize
++
++@Parcelize
++@Entity
+ data class Article(
+     val author: String,
+     val content: String,
+@@ -7,6 +14,6 @@
+     val publishedAt: String,
+     val source: Source,
+     val title: String,
+-    val url: String,
++    @PrimaryKey val url: String,
+     val urlToImage: String
+-)
+\ No newline at end of file
++) : Parcelable
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivityViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.mainActivity\n\nimport androidx.compose.runtime.getValue\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.compose.runtime.setValue\nimport androidx.lifecycle.ViewModel\nimport androidx.lifecycle.viewModelScope\nimport com.erenalparslan.newsapp.domain.usecase.app_enty.AppEntryUseCases\nimport com.loc.newsapp.presentation.navgraph.Route\nimport dagger.hilt.android.lifecycle.HiltViewModel\nimport kotlinx.coroutines.delay\nimport kotlinx.coroutines.flow.launchIn\nimport kotlinx.coroutines.flow.onEach\nimport javax.inject.Inject\n\n@HiltViewModel\nclass MainActivityViewModel @Inject constructor(val appEntryUseCases: AppEntryUseCases):ViewModel() {\n\n     var splashScreenCondition by mutableStateOf(false)\n        private set\n\n     var startDestination by mutableStateOf(Route.AppStartNavigation.route)\n        private set\n\n    init {\n        appEntryUseCases.readAppEntryUseCase().onEach { shouldStartFromHomeScreen ->\n            if (shouldStartFromHomeScreen) {\n                startDestination = Route.NewsNavigation.route\n            } else {\n                startDestination = Route.AppStartNavigation.route\n            }\n            delay(3000)\n            splashScreenCondition=false\n        }.launchIn(viewModelScope)\n    }\n\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivityViewModel.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivityViewModel.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivityViewModel.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/mainActivity/MainActivityViewModel.kt	(date 1714603581025)
+@@ -1,5 +1,6 @@
+ package com.erenalparslan.newsapp.presentation.mainActivity
+ 
++import androidx.compose.runtime.State
+ import androidx.compose.runtime.getValue
+ import androidx.compose.runtime.mutableStateOf
+ import androidx.compose.runtime.setValue
+@@ -19,15 +20,15 @@
+      var splashScreenCondition by mutableStateOf(false)
+         private set
+ 
+-     var startDestination by mutableStateOf(Route.AppStartNavigation.route)
+-        private set
++    private val _startDestination = mutableStateOf(Route.AppStartNavigation.route)
++    val startDestination: State<String> = _startDestination
+ 
+     init {
+         appEntryUseCases.readAppEntryUseCase().onEach { shouldStartFromHomeScreen ->
+             if (shouldStartFromHomeScreen) {
+-                startDestination = Route.NewsNavigation.route
++                _startDestination.value = Route.NewsNavigation.route
+             } else {
+-                startDestination = Route.AppStartNavigation.route
++                _startDestination.value = Route.AppStartNavigation.route
+             }
+             delay(3000)
+             splashScreenCondition=false
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeState.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.loc.newsapp.presentation.home\n\n\ndata class HomeState(\n    val newsTicker: String = \"\",\n    val isLoading: Boolean = false,\n)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeState.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeState.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeState.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/home/HomeState.kt	(date 1714603581010)
+@@ -1,4 +1,4 @@
+-package com.loc.newsapp.presentation.home
++package com.erenalparslan.newsapp.presentation.home
+ 
+ 
+ data class HomeState(
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/DeleteArticle.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/DeleteArticle.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/DeleteArticle.kt
+new file mode 100644
+--- /dev/null	(date 1714601336655)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/DeleteArticle.kt	(date 1714601336655)
+@@ -0,0 +1,14 @@
++package com.erenalparslan.newsapp.domain.usecase.news
++
++import com.erenalparslan.newsapp.data.local.NewsDao
++import com.erenalparslan.newsapp.domain.model.Article
++
++class DeleteArticle (
++    private val newsDao: NewsDao
++) {
++
++    suspend operator fun invoke(article: Article){
++        newsDao.delete(article = article)
++    }
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/util/DataState.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/util/DataState.kt b/app/src/main/java/com/erenalparslan/newsapp/util/DataState.kt
+new file mode 100644
+--- /dev/null	(date 1714602986819)
++++ b/app/src/main/java/com/erenalparslan/newsapp/util/DataState.kt	(date 1714602986819)
+@@ -0,0 +1,20 @@
++package com.erenalparslan.newsapp.util
++
++sealed class DataState<T> {
++
++    data class Loading<T>(val isLoading: Boolean) : DataState<T>()
++
++    data class Success<T>(val data: T) : DataState<T>()
++
++    data class Response<T>(val uiComponent: UIComponent, val error: Exception?=null) : DataState<T>()
++}
++
++sealed class UIComponent {
++
++    data class Toast(val message: String): UIComponent()
++
++    data class Dialog(val title: String, val message: String): UIComponent()
++
++    data class None(val message: String? = null): UIComponent()
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetArticles.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetArticles.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetArticles.kt
+new file mode 100644
+--- /dev/null	(date 1714601336648)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/GetArticles.kt	(date 1714601336648)
+@@ -0,0 +1,15 @@
++package com.erenalparslan.newsapp.domain.usecase.news
++
++import com.erenalparslan.newsapp.data.local.NewsDao
++import com.erenalparslan.newsapp.domain.model.Article
++import kotlinx.coroutines.flow.Flow
++
++class GetArticles(
++    private val newsDao: NewsDao
++) {
++
++    operator fun invoke(): Flow<List<Article>>{
++        return newsDao.getArticles()
++    }
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/UpsertArticle.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/UpsertArticle.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/UpsertArticle.kt
+new file mode 100644
+--- /dev/null	(date 1714601336654)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/news/UpsertArticle.kt	(date 1714601336654)
+@@ -0,0 +1,14 @@
++package com.erenalparslan.newsapp.domain.usecase.news
++
++import com.erenalparslan.newsapp.data.local.NewsDao
++import com.erenalparslan.newsapp.domain.model.Article
++
++class UpsertArticle(
++    private val newsDao: NewsDao
++) {
++
++    suspend operator fun invoke(article: Article){
++        newsDao.upsert(article = article)
++    }
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/repository/NewsRepository.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.domain.repository\n\nimport androidx.paging.PagingData\nimport com.erenalparslan.newsapp.domain.model.Article\nimport kotlinx.coroutines.flow.Flow\n\ninterface NewsRepository {\n\n     fun getNews(sources: List<String>): Flow<PagingData<Article>>\n\n     fun searchNews(query :String,sources: List<String> ) :Flow<PagingData<Article>>\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/repository/NewsRepository.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/repository/NewsRepository.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/repository/NewsRepository.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/repository/NewsRepository.kt	(date 1714601336652)
+@@ -9,4 +9,10 @@
+      fun getNews(sources: List<String>): Flow<PagingData<Article>>
+ 
+      fun searchNews(query :String,sources: List<String> ) :Flow<PagingData<Article>>
++
++     suspend fun upsertArticle(article: Article)
++
++     suspend fun deleteArticle(article: Article)
++
++     fun getArticles(): Flow<List<Article>>
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/repository/NewsRepositoryImpl.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.data.repository\n\nimport androidx.paging.Pager\nimport androidx.paging.PagingConfig\nimport androidx.paging.PagingData\nimport com.erenalparslan.newsapp.data.remote.NewsApi\nimport com.erenalparslan.newsapp.data.remote.NewsPagingSource\nimport com.erenalparslan.newsapp.data.remote.SearchNewsPagingSource\nimport com.erenalparslan.newsapp.domain.repository.NewsRepository\nimport com.erenalparslan.newsapp.domain.model.Article\nimport kotlinx.coroutines.flow.Flow\n\nclass NewsRepositoryImpl(private val newsApi: NewsApi) : NewsRepository {\n\n\n    override fun getNews(sources: List<String>): Flow<PagingData<Article>> {\n        return Pager(\n            config = PagingConfig(pageSize = 10),\n            pagingSourceFactory = {\n                NewsPagingSource(\n                    newsApi,\n                    sources = sources.joinToString(separator = \",\")\n                )\n            }\n        ).flow\n    }\n\n    override fun searchNews(query: String, sources: List<String>): Flow<PagingData<Article>> {\n        return Pager(\n            config = PagingConfig(pageSize = 10),\n            pagingSourceFactory = {\n                SearchNewsPagingSource(\n                    newsApi,\n                    searchQuery = query,\n                    sources = sources.joinToString(separator = \",\")\n                )\n            }\n        ).flow\n    }\n\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/repository/NewsRepositoryImpl.kt b/app/src/main/java/com/erenalparslan/newsapp/data/repository/NewsRepositoryImpl.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/data/repository/NewsRepositoryImpl.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/repository/NewsRepositoryImpl.kt	(date 1714601336643)
+@@ -3,6 +3,7 @@
+ import androidx.paging.Pager
+ import androidx.paging.PagingConfig
+ import androidx.paging.PagingData
++import com.erenalparslan.newsapp.data.local.NewsDao
+ import com.erenalparslan.newsapp.data.remote.NewsApi
+ import com.erenalparslan.newsapp.data.remote.NewsPagingSource
+ import com.erenalparslan.newsapp.data.remote.SearchNewsPagingSource
+@@ -10,7 +11,7 @@
+ import com.erenalparslan.newsapp.domain.model.Article
+ import kotlinx.coroutines.flow.Flow
+ 
+-class NewsRepositoryImpl(private val newsApi: NewsApi) : NewsRepository {
++class NewsRepositoryImpl(private val newsApi: NewsApi,private val newsDao: NewsDao) : NewsRepository {
+ 
+ 
+     override fun getNews(sources: List<String>): Flow<PagingData<Article>> {
+@@ -38,4 +39,16 @@
+         ).flow
+     }
+ 
++    override suspend fun upsertArticle(article: Article) {
++        newsDao.upsert(article)
++    }
++
++    override suspend fun deleteArticle(article: Article) {
++        newsDao.delete(article)
++    }
++
++    override fun getArticles(): Flow<List<Article>> {
++        return newsDao.getArticles()
++    }
++
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsViewModel.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsViewModel.kt
+new file mode 100644
+--- /dev/null	(date 1714602986828)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsViewModel.kt	(date 1714602986828)
+@@ -0,0 +1,56 @@
++package com.erenalparslan.newsapp.presentation.details
++
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.setValue
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import com.erenalparslan.newsapp.domain.model.Article
++import com.erenalparslan.newsapp.domain.usecase.news.DeleteArticle
++import com.erenalparslan.newsapp.domain.usecase.news.GetSavedArticle
++import com.erenalparslan.newsapp.domain.usecase.news.UpsertArticle
++import com.erenalparslan.newsapp.util.UIComponent
++import dagger.hilt.android.lifecycle.HiltViewModel
++import kotlinx.coroutines.launch
++import javax.inject.Inject
++
++@HiltViewModel
++class DetailsViewModel @Inject constructor(
++    private val getSavedArticleUseCase: GetSavedArticle,
++    private val deleteArticleUseCase: DeleteArticle,
++    private val upsertArticleUseCase: UpsertArticle
++) : ViewModel() {
++
++    var sideEffect by mutableStateOf<UIComponent?>(null)
++        private set
++
++    fun onEvent(event: DetailsEvent) {
++        when (event) {
++            is DetailsEvent.UpsertDeleteArticle -> {
++                viewModelScope.launch {
++                    val article = getSavedArticleUseCase(url = event.article.url)
++                    if (article == null) {
++                        upsertArticle(article = event.article)
++                    } else {
++                        deleteArticle(article = event.article)
++                    }
++                }
++            }
++
++            is DetailsEvent.RemoveSideEffect -> {
++                sideEffect = null
++            }
++        }
++    }
++
++    private suspend fun deleteArticle(article: Article) {
++        deleteArticleUseCase(article = article)
++        sideEffect = UIComponent.Toast("Article deleted")
++    }
++
++    private suspend fun upsertArticle(article: Article) {
++        upsertArticleUseCase(article = article)
++        sideEffect = UIComponent.Toast("Article Inserted")
++    }
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDao.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDao.kt b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDao.kt
+new file mode 100644
+--- /dev/null	(date 1714602986826)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDao.kt	(date 1714602986826)
+@@ -0,0 +1,26 @@
++package com.erenalparslan.newsapp.data.local
++
++import androidx.room.Dao
++import androidx.room.Delete
++import androidx.room.Insert
++import androidx.room.OnConflictStrategy
++import androidx.room.Query
++import com.erenalparslan.newsapp.domain.model.Article
++import kotlinx.coroutines.flow.Flow
++
++@Dao
++interface NewsDao {
++
++    @Insert(onConflict = OnConflictStrategy.REPLACE)
++    suspend fun upsert(article: Article)
++
++    @Delete
++    suspend fun delete(article: Article)
++
++    @Query("SELECT * FROM Article")
++    fun getArticles(): Flow<List<Article>>
++
++    @Query("SELECT * FROM Article WHERE url=:url")
++    suspend fun getArticle(url: String): Article?
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDatabase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDatabase.kt b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDatabase.kt
+new file mode 100644
+--- /dev/null	(date 1714601507733)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsDatabase.kt	(date 1714601507733)
+@@ -0,0 +1,14 @@
++package com.erenalparslan.newsapp.data.local
++
++import androidx.room.Database
++import androidx.room.RoomDatabase
++import androidx.room.TypeConverters
++import com.erenalparslan.newsapp.domain.model.Article
++
++@Database(entities = [Article::class],version = 2)
++@TypeConverters(NewsTypeConvertor::class)
++abstract class NewsDatabase : RoomDatabase() {
++
++    abstract val newsDao: NewsDao
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/local/NewsTypeConvertor.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsTypeConvertor.kt b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsTypeConvertor.kt
+new file mode 100644
+--- /dev/null	(date 1714587581986)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/local/NewsTypeConvertor.kt	(date 1714587581986)
+@@ -0,0 +1,21 @@
++package com.erenalparslan.newsapp.data.local
++
++import androidx.room.ProvidedTypeConverter
++import androidx.room.TypeConverter
++import com.erenalparslan.newsapp.domain.model.Source
++
++@ProvidedTypeConverter
++class NewsTypeConvertor {
++
++    @TypeConverter
++    fun sourceToString(source: Source): String{
++        return "${source.id},${source.name}"
++    }
++
++    @TypeConverter
++    fun stringToSource(source: String): Source{
++        return source.split(',').let { sourceArray ->
++              Source(id = sourceArray[0], name = sourceArray[1])
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/remote/dto/NewsResponse.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.loc.newsapp.data.remote.dto\n\nimport com.erenalparslan.newsapp.domain.model.Article\n\ndata class NewsResponse(\n    val articles: List<Article>,\n    val status: String,\n    val totalResults: Int\n)
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/remote/dto/NewsResponse.kt b/app/src/main/java/com/erenalparslan/newsapp/data/remote/dto/NewsResponse.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/data/remote/dto/NewsResponse.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/remote/dto/NewsResponse.kt	(date 1714601570428)
+@@ -1,4 +1,4 @@
+-package com.loc.newsapp.data.remote.dto
++package com.erenalparslan.newsapp.data.remote.dto
+ 
+ import com.erenalparslan.newsapp.domain.model.Article
+ 
+Index: app/src/main/java/com/erenalparslan/newsapp/data/remote/NewsApi.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.data.remote\n\nimport com.erenalparslan.newsapp.util.Constans.API_KEY\nimport com.loc.newsapp.data.remote.dto.NewsResponse\nimport retrofit2.http.GET\nimport retrofit2.http.Query\n\ninterface NewsApi {\n\n    @GET(\"everything\")\n    suspend fun getNews(\n        @Query(\"sources\") sources: String,\n        @Query(\"page\") page: Int,\n        @Query(\"apiKey\") apiKey: String = API_KEY\n    ): NewsResponse\n\n    @GET(\"everything\")\n    suspend fun searchNews(\n        @Query(\"q\") searchQuery: String,\n        @Query(\"sources\") sources: String,\n        @Query(\"page\") page: Int,\n        @Query(\"apiKey\") apiKey: String = API_KEY\n    ): NewsResponse\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/remote/NewsApi.kt b/app/src/main/java/com/erenalparslan/newsapp/data/remote/NewsApi.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/data/remote/NewsApi.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/remote/NewsApi.kt	(date 1714601570432)
+@@ -1,7 +1,7 @@
+ package com.erenalparslan.newsapp.data.remote
+ 
+ import com.erenalparslan.newsapp.util.Constans.API_KEY
+-import com.loc.newsapp.data.remote.dto.NewsResponse
++import com.erenalparslan.newsapp.data.remote.dto.NewsResponse
+ import retrofit2.http.GET
+ import retrofit2.http.Query
+ 
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/details/components/DetailsTopBar.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/details/components/DetailsTopBar.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/components/DetailsTopBar.kt
+new file mode 100644
+--- /dev/null	(date 1714586463968)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/components/DetailsTopBar.kt	(date 1714586463968)
+@@ -0,0 +1,83 @@
++package com.erenalparslan.newsapp.presentation.details.components
++
++import android.content.res.Configuration.UI_MODE_NIGHT_YES
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.material.icons.Icons
++import androidx.compose.material.icons.filled.Share
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Icon
++import androidx.compose.material3.IconButton
++import androidx.compose.material3.TopAppBar
++import androidx.compose.material3.TopAppBarDefaults
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.res.colorResource
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.tooling.preview.Preview
++import com.erenalparslan.newsapp.R
++import com.erenalparslan.newsapp.ui.theme.NewsAppTheme
++
++
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun DetailsTopBar(
++    onBrowsingClick: () -> Unit,
++    onShareClick: () -> Unit,
++    onBookMarkClick: () -> Unit,
++    onBackClick: () -> Unit,
++) {
++
++    TopAppBar(
++        modifier = Modifier.fillMaxWidth(),
++        colors = TopAppBarDefaults.mediumTopAppBarColors(
++            containerColor = Color.Transparent,
++            actionIconContentColor = colorResource(id = R.color.body),
++            navigationIconContentColor = colorResource(id = R.color.body),
++        ),
++        title = {},
++        navigationIcon = {
++            IconButton(onClick = onBackClick) {
++                Icon(
++                    painter = painterResource(id = R.drawable.ic_back_arrow),
++                    contentDescription = null,
++                )
++            }
++        },
++        actions = {
++
++            IconButton(onClick = onBookMarkClick) {
++                Icon(
++                    painter = painterResource(id = R.drawable.ic_bookmark),
++                    contentDescription = null
++                )
++            }
++            IconButton(onClick = onShareClick) {
++                Icon(
++                    imageVector = Icons.Default.Share,
++                    contentDescription = null
++                )
++            }
++            IconButton(onClick = onBrowsingClick) {
++                Icon(
++                    painter = painterResource(id = R.drawable.ic_network),
++                    contentDescription = null
++                )
++            }
++        },
++    )
++}
++
++@Preview(showBackground = true)
++@Preview(showBackground = true, uiMode = UI_MODE_NIGHT_YES)
++@Composable
++fun DetailsTopBarPreview() {
++    NewsAppTheme(dynamicColor = false) {
++        DetailsTopBar(
++            onShareClick = { /*TODO*/ },
++            onBookMarkClick = { /*TODO*/ },
++            onBrowsingClick = {}) {
++
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsEvent.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsEvent.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsEvent.kt
+new file mode 100644
+--- /dev/null	(date 1714602986840)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsEvent.kt	(date 1714602986840)
+@@ -0,0 +1,11 @@
++package com.erenalparslan.newsapp.presentation.details
++
++import com.erenalparslan.newsapp.domain.model.Article
++
++sealed class DetailsEvent {
++
++    data class UpsertDeleteArticle(val article: Article) : DetailsEvent()
++
++    object RemoveSideEffect : DetailsEvent()
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsScreen.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsScreen.kt
+new file mode 100644
+--- /dev/null	(date 1714603281749)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/details/DetailsScreen.kt	(date 1714603281749)
+@@ -0,0 +1,147 @@
++package com.erenalparslan.newsapp.presentation.details
++
++import android.content.Intent
++import android.net.Uri
++import android.widget.Toast
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.PaddingValues
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.statusBarsPadding
++import androidx.compose.foundation.lazy.LazyColumn
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.clip
++import androidx.compose.ui.layout.ContentScale
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.colorResource
++import androidx.compose.ui.tooling.preview.Preview
++import coil.compose.AsyncImage
++import coil.request.ImageRequest
++import com.erenalparslan.newsapp.Dimens.ArticleImageHeight
++import com.erenalparslan.newsapp.Dimens.MediumPadding1
++import com.erenalparslan.newsapp.R
++import com.erenalparslan.newsapp.domain.model.Article
++import com.erenalparslan.newsapp.domain.model.Source
++import com.erenalparslan.newsapp.presentation.details.components.DetailsTopBar
++import com.erenalparslan.newsapp.ui.theme.NewsAppTheme
++import com.erenalparslan.newsapp.util.UIComponent
++
++@Composable
++fun DetailsScreen(
++    article: Article,
++    event: (DetailsEvent) -> Unit,
++    sideEffect: UIComponent?,
++    navigateUp: () -> Unit
++) {
++    val context = LocalContext.current
++
++    LaunchedEffect(key1 = sideEffect) {
++        sideEffect?.let {
++            when(sideEffect){
++                is UIComponent.Toast ->{
++                    Toast.makeText(context, sideEffect.message, Toast.LENGTH_SHORT).show()
++                    event(DetailsEvent.RemoveSideEffect)
++                }
++                else -> Unit
++            }
++        }
++    }
++
++    Column(
++        modifier = Modifier
++            .fillMaxSize()
++            .statusBarsPadding()
++    ) {
++        DetailsTopBar(
++            onBrowsingClick = {
++                Intent(Intent.ACTION_VIEW).also {
++                    it.data = Uri.parse(article.url)
++                    if (it.resolveActivity(context.packageManager) != null) {
++                        context.startActivity(it)
++                    }
++                }
++            },
++            onShareClick = {
++                Intent(Intent.ACTION_SEND).also {
++                    it.putExtra(Intent.EXTRA_TEXT, article.url)
++                    it.type = "text/plain"
++                    if (it.resolveActivity(context.packageManager) != null) {
++                        context.startActivity(it)
++                    }
++                }
++            },
++            onBookMarkClick = {
++                event(DetailsEvent.UpsertDeleteArticle(article))
++            },
++            onBackClick = navigateUp
++        )
++
++        LazyColumn(
++            modifier = Modifier.fillMaxWidth(),
++            contentPadding = PaddingValues(
++                start = MediumPadding1,
++                end = MediumPadding1,
++                top = MediumPadding1
++            )
++        ) {
++            item {
++                AsyncImage(
++                    model = ImageRequest.Builder(context = context).data(article.urlToImage)
++                        .build(),
++                    contentDescription = null,
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .height(ArticleImageHeight)
++                        .clip(MaterialTheme.shapes.medium),
++                    contentScale = ContentScale.Crop
++                )
++                Spacer(modifier = Modifier.height(MediumPadding1))
++                Text(
++                    text = article.title,
++                    style = MaterialTheme.typography.displaySmall,
++                    color = colorResource(
++                        id = R.color.text_title
++                    )
++                )
++                Text(
++                    text = article.content,
++                    style = MaterialTheme.typography.bodyMedium,
++                    color = colorResource(
++                        id = R.color.body
++                    )
++                )
++            }
++        }
++    }
++}
++
++@Preview(showBackground = true)
++@Composable
++fun DetailsScreenPreview() {
++    NewsAppTheme(dynamicColor = false) {
++        DetailsScreen(
++            article = Article(
++                author = "",
++                title = "Coinbase says Apple blocked its last app release on NFTs in Wallet ... - CryptoSaurus",
++                description = "Coinbase says Apple blocked its last app release on NFTs in Wallet ... - CryptoSaurus",
++                content = "We use cookies and data to Deliver and maintain Google services Track outages and protect against spam, fraud, and abuse Measure audience engagement and site statistics to unde… [+1131 chars]",
++                publishedAt = "2023-06-16T22:24:33Z",
++                source = Source(
++                    id = "", name = "bbc"
++                ),
++                url = "https://consent.google.com/ml?continue=https://news.google.com/rss/articles/CBMiaWh0dHBzOi8vY3J5cHRvc2F1cnVzLnRlY2gvY29pbmJhc2Utc2F5cy1hcHBsZS1ibG9ja2VkLWl0cy1sYXN0LWFwcC1yZWxlYXNlLW9uLW5mdHMtaW4td2FsbGV0LXJldXRlcnMtY29tL9IBAA?oc%3D5&gl=FR&hl=en-US&cm=2&pc=n&src=1",
++                urlToImage = "https://media.wired.com/photos/6495d5e893ba5cd8bbdc95af/191:100/w_1280,c_limit/The-EU-Rules-Phone-Batteries-Must-Be-Replaceable-Gear-2BE6PRN.jpg"
++            ),
++            event = {},
++            sideEffect = null
++        ) {
++
++        }
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/nvgraph/NavGraph.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.nvgraph\n\nimport androidx.compose.foundation.background\nimport androidx.compose.foundation.layout.Arrangement\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.fillMaxWidth\nimport androidx.compose.foundation.layout.size\nimport androidx.compose.material3.MaterialTheme\nimport androidx.compose.material3.Text\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Alignment\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.graphics.Color\nimport androidx.compose.ui.unit.dp\nimport androidx.hilt.navigation.compose.hiltViewModel\nimport androidx.navigation.compose.NavHost\nimport androidx.navigation.compose.composable\nimport androidx.navigation.compose.rememberNavController\nimport androidx.navigation.navigation\nimport androidx.paging.compose.collectAsLazyPagingItems\nimport com.erenalparslan.newsapp.presentation.home.HomeViewModel\nimport com.erenalparslan.newsapp.presentation.introduction.IntroductionScreen\nimport com.erenalparslan.newsapp.presentation.introduction.IntroductionViewModel\nimport com.erenalparslan.newsapp.presentation.search.SearchViewModel\nimport com.loc.newsapp.presentation.home.HomeScreen\nimport com.loc.newsapp.presentation.home.HomeState\nimport com.loc.newsapp.presentation.navgraph.Route\nimport com.loc.newsapp.presentation.search.SearchScreen\n\n\n@Composable\nfun NavGraph(\n    startDestination: String\n) {\n    val navController = rememberNavController()\n\n    NavHost(navController = navController, startDestination = startDestination) {\n        navigation(\n            route = Route.AppStartNavigation.route,\n            startDestination = Route.OnBoardingScreen.route\n        ) {\n            composable(route = Route.OnBoardingScreen.route) {\n                val viewModel: IntroductionViewModel = hiltViewModel()\n                IntroductionScreen(event = viewModel::onEvent)\n            }\n        }\n\n        navigation(\n            route = Route.NewsNavigation.route,\n            startDestination = Route.NewsNavigatorScreen.route\n        ) {\n            composable(route = Route.NewsNavigatorScreen.route) {\n                Column(\n                    horizontalAlignment = Alignment.CenterHorizontally,\n                    modifier = Modifier\n                        .fillMaxSize()\n                        .background(MaterialTheme.colorScheme.background),\n                    verticalArrangement = Arrangement.Center\n                ) {\n                    val viewModel :SearchViewModel= hiltViewModel()\n                    var state=viewModel.state.value\n                  SearchScreen(state = state, event = viewModel::onEvent, navigateToDetails = {})\n\n\n                }\n\n            }\n        }\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/nvgraph/NavGraph.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/nvgraph/NavGraph.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/nvgraph/NavGraph.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/nvgraph/NavGraph.kt	(date 1714603581008)
+@@ -1,32 +1,15 @@
+ package com.erenalparslan.newsapp.presentation.nvgraph
+ 
+-import androidx.compose.foundation.background
+-import androidx.compose.foundation.layout.Arrangement
+-import androidx.compose.foundation.layout.Column
+-import androidx.compose.foundation.layout.fillMaxSize
+-import androidx.compose.foundation.layout.fillMaxWidth
+-import androidx.compose.foundation.layout.size
+-import androidx.compose.material3.MaterialTheme
+-import androidx.compose.material3.Text
+ import androidx.compose.runtime.Composable
+-import androidx.compose.ui.Alignment
+-import androidx.compose.ui.Modifier
+-import androidx.compose.ui.graphics.Color
+-import androidx.compose.ui.unit.dp
+ import androidx.hilt.navigation.compose.hiltViewModel
+ import androidx.navigation.compose.NavHost
+ import androidx.navigation.compose.composable
+ import androidx.navigation.compose.rememberNavController
+ import androidx.navigation.navigation
+-import androidx.paging.compose.collectAsLazyPagingItems
+-import com.erenalparslan.newsapp.presentation.home.HomeViewModel
+ import com.erenalparslan.newsapp.presentation.introduction.IntroductionScreen
+ import com.erenalparslan.newsapp.presentation.introduction.IntroductionViewModel
+-import com.erenalparslan.newsapp.presentation.search.SearchViewModel
+-import com.loc.newsapp.presentation.home.HomeScreen
+-import com.loc.newsapp.presentation.home.HomeState
++import com.erenalparslan.newsapp.presentation.news_navigator.NewsNavigator
+ import com.loc.newsapp.presentation.navgraph.Route
+-import com.loc.newsapp.presentation.search.SearchScreen
+ 
+ 
+ @Composable
+@@ -42,7 +25,7 @@
+         ) {
+             composable(route = Route.OnBoardingScreen.route) {
+                 val viewModel: IntroductionViewModel = hiltViewModel()
+-                IntroductionScreen(event = viewModel::onEvent)
++                IntroductionScreen(viewModel::onEvent)
+             }
+         }
+ 
+@@ -50,21 +33,8 @@
+             route = Route.NewsNavigation.route,
+             startDestination = Route.NewsNavigatorScreen.route
+         ) {
+-            composable(route = Route.NewsNavigatorScreen.route) {
+-                Column(
+-                    horizontalAlignment = Alignment.CenterHorizontally,
+-                    modifier = Modifier
+-                        .fillMaxSize()
+-                        .background(MaterialTheme.colorScheme.background),
+-                    verticalArrangement = Arrangement.Center
+-                ) {
+-                    val viewModel :SearchViewModel= hiltViewModel()
+-                    var state=viewModel.state.value
+-                  SearchScreen(state = state, event = viewModel::onEvent, navigateToDetails = {})
+-
+-
+-                }
+-
++            composable(route = Route.NewsNavigatorScreen.route){
++                NewsNavigator()
+             }
+         }
+     }
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.loc.newsapp.presentation.search\n\nimport androidx.compose.foundation.layout.Arrangement\nimport androidx.compose.foundation.layout.Column\nimport androidx.compose.foundation.layout.Spacer\nimport androidx.compose.foundation.layout.fillMaxSize\nimport androidx.compose.foundation.layout.height\nimport androidx.compose.foundation.layout.padding\nimport androidx.compose.foundation.layout.statusBarsPadding\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Modifier\nimport androidx.paging.compose.collectAsLazyPagingItems\nimport com.erenalparslan.newsapp.Dimens.MediumPadding1\nimport com.erenalparslan.newsapp.domain.model.Article\nimport com.erenalparslan.newsapp.presentation.common.ArticlesList\nimport com.erenalparslan.newsapp.presentation.common.SearchBar\nimport com.erenalparslan.newsapp.presentation.search.SearchState\n\n@Composable\nfun SearchScreen(\n    state: SearchState,\n    event:(SearchEvent) -> Unit,\n    navigateToDetails:(Article) -> Unit\n) {\n\n    Column(\n        modifier = Modifier\n            .padding(top = MediumPadding1, start = MediumPadding1, end = MediumPadding1)\n            .fillMaxSize()\n            .statusBarsPadding(),\n        verticalArrangement = Arrangement.Top\n    ) {\n        SearchBar(\n            text = state.searchQuery,\n            readOnly = false,\n            onValueChange = { event(SearchEvent.UpdateSearchQuery(it)) },\n            onSearch = {\n                event(SearchEvent.SearchNews)\n            }\n        )\n        Spacer(modifier = Modifier.height(MediumPadding1))\n        state.articles?.let {\n            val articles = it.collectAsLazyPagingItems()\n            ArticlesList(\n                articles = articles,\n                onClick = navigateToDetails\n            )\n        }\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchScreen.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchScreen.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchScreen.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchScreen.kt	(date 1714603680017)
+@@ -1,4 +1,4 @@
+-package com.loc.newsapp.presentation.search
++package com.erenalparslan.newsapp.presentation.search
+ 
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Column
+@@ -14,7 +14,6 @@
+ import com.erenalparslan.newsapp.domain.model.Article
+ import com.erenalparslan.newsapp.presentation.common.ArticlesList
+ import com.erenalparslan.newsapp.presentation.common.SearchBar
+-import com.erenalparslan.newsapp.presentation.search.SearchState
+ 
+ @Composable
+ fun SearchScreen(
+Index: .idea/kotlinc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/kotlinc.xml b/.idea/kotlinc.xml
+new file mode 100644
+--- /dev/null	(date 1714601914808)
++++ b/.idea/kotlinc.xml	(date 1714601914808)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="KotlinJpsPluginSettings">
++    <option name="version" value="1.8.10" />
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.presentation.search\n\nimport androidx.compose.runtime.State\nimport androidx.compose.runtime.mutableStateOf\nimport androidx.lifecycle.ViewModel\nimport androidx.lifecycle.viewModelScope\nimport androidx.paging.cachedIn\nimport com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases\nimport com.loc.newsapp.presentation.search.SearchEvent\nimport dagger.hilt.android.lifecycle.HiltViewModel\nimport javax.inject.Inject\n\n@HiltViewModel\nclass SearchViewModel @Inject constructor(\n    private val newsUseCases: NewsUseCases\n) : ViewModel() {\n\n    private var _state = mutableStateOf(SearchState())\n    val state: State<SearchState> = _state\n\n\n    fun onEvent(event: SearchEvent) {\n        when (event) {\n            is SearchEvent.UpdateSearchQuery -> {\n                _state.value = _state.value.copy(searchQuery = event.searchQuery)\n            }\n\n            is SearchEvent.SearchNews -> {\n                searchNews()\n            }\n        }\n    }\n\n    private fun searchNews() {\n        val articles = newsUseCases.searchNewsUseCase(\n            searchQuery = _state.value.searchQuery,\n            sources = listOf(\"bbc-news\", \"abc-news\", \"al-jazeera-english\")\n        ).cachedIn(viewModelScope)\n        _state.value = _state.value.copy(articles = articles)\n    }\n\n\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchViewModel.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchViewModel.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchViewModel.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchViewModel.kt	(date 1714601641473)
+@@ -6,7 +6,6 @@
+ import androidx.lifecycle.viewModelScope
+ import androidx.paging.cachedIn
+ import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
+-import com.loc.newsapp.presentation.search.SearchEvent
+ import dagger.hilt.android.lifecycle.HiltViewModel
+ import javax.inject.Inject
+ 
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchEvent.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.loc.newsapp.presentation.search\n\nsealed class SearchEvent {\n\n    data class UpdateSearchQuery(val searchQuery: String) : SearchEvent()\n\n    object SearchNews : SearchEvent()\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchEvent.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchEvent.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchEvent.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/search/SearchEvent.kt	(date 1714601641469)
+@@ -1,4 +1,4 @@
+-package com.loc.newsapp.presentation.search
++package com.erenalparslan.newsapp.presentation.search
+ 
+ sealed class SearchEvent {
+ 
+Index: .idea/migrations.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/migrations.xml b/.idea/migrations.xml
+new file mode 100644
+--- /dev/null	(date 1714601914810)
++++ b/.idea/migrations.xml	(date 1714601914810)
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ProjectMigrations">
++    <option name="MigrateToGradleLocalJavaHome">
++      <set>
++        <option value="$PROJECT_DIR$" />
++      </set>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkViewModel.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkViewModel.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkViewModel.kt
+new file mode 100644
+--- /dev/null	(date 1714602986839)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkViewModel.kt	(date 1714602986839)
+@@ -0,0 +1,30 @@
++package com.erenalparslan.newsapp.presentation.bookmark
++
++import androidx.compose.runtime.State
++import androidx.compose.runtime.mutableStateOf
++import androidx.lifecycle.ViewModel
++import androidx.lifecycle.viewModelScope
++import com.erenalparslan.newsapp.domain.usecase.news.GetArticles
++import dagger.hilt.android.lifecycle.HiltViewModel
++import kotlinx.coroutines.flow.launchIn
++import kotlinx.coroutines.flow.onEach
++import javax.inject.Inject
++
++@HiltViewModel
++class BookmarkViewModel @Inject constructor(
++    private val getSavedArticlesUseCase: GetArticles
++) : ViewModel() {
++
++    private val _state = mutableStateOf(BookmarkState())
++    val state: State<BookmarkState> = _state
++
++    init {
++        getArticles()
++    }
++
++    private fun getArticles() {
++        getSavedArticlesUseCase().onEach {
++            _state.value = _state.value.copy(articles = it)
++        }.launchIn(viewModelScope)
++    }
++}
+\ No newline at end of file
+Index: app/build.gradle.kts
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>plugins {\n    id(\"com.android.application\")\n    id(\"org.jetbrains.kotlin.android\")\n    id(\"com.google.dagger.hilt.android\")\n    id(\"kotlin-kapt\")\n    id (\"kotlin-parcelize\")\n}\n\nandroid {\n    namespace = \"com.erenalparslan.newsapp\"\n    compileSdk = 34\n\n    defaultConfig {\n        applicationId = \"com.erenalparslan.newsapp\"\n        minSdk = 24\n        targetSdk = 34\n        versionCode = 1\n        versionName = \"1.0\"\n\n        testInstrumentationRunner = \"androidx.test.runner.AndroidJUnitRunner\"\n        vectorDrawables {\n            useSupportLibrary = true\n        }\n    }\n\n    buildTypes {\n        release {\n            isMinifyEnabled = false\n            proguardFiles(\n                getDefaultProguardFile(\"proguard-android-optimize.txt\"),\n                \"proguard-rules.pro\"\n            )\n        }\n    }\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }\n    kotlinOptions {\n        jvmTarget = \"17\"\n    }\n    buildFeatures {\n        compose = true\n    }\n    composeOptions {\n        kotlinCompilerExtensionVersion = \"1.4.3\"\n    }\n    packaging {\n        resources {\n            excludes += \"/META-INF/{AL2.0,LGPL2.1}\"\n        }\n    }\n}\n\ndependencies {\n\n    implementation(\"androidx.core:core-ktx:1.12.0\")\n    implementation(\"androidx.lifecycle:lifecycle-runtime-ktx:2.7.0\")\n    implementation(\"androidx.activity:activity-compose:1.8.2\")\n    implementation(platform(\"androidx.compose:compose-bom:2023.08.00\"))\n    implementation(\"androidx.compose.ui:ui\")\n    implementation(\"androidx.compose.ui:ui-graphics\")\n    implementation(\"androidx.compose.ui:ui-tooling-preview\")\n    implementation(\"androidx.compose.material3:material3\")\n    testImplementation(\"junit:junit:4.13.2\")\n    androidTestImplementation(\"androidx.test.ext:junit:1.1.5\")\n    androidTestImplementation(\"androidx.test.espresso:espresso-core:3.5.1\")\n    androidTestImplementation(platform(\"androidx.compose:compose-bom:2023.08.00\"))\n    androidTestImplementation(\"androidx.compose.ui:ui-test-junit4\")\n    debugImplementation(\"androidx.compose.ui:ui-tooling\")\n    debugImplementation(\"androidx.compose.ui:ui-test-manifest\")\n\n    //Splash Api\n    implementation (\"androidx.core:core-splashscreen:1.0.1\")\n\n    //Datastore\n    implementation (\"androidx.datastore:datastore-preferences:1.0.0\")\n\n    // Retrofit\n    implementation(\"com.squareup.retrofit2:retrofit:2.9.0\")\n    implementation(\"com.squareup.retrofit2:converter-gson:2.9.0\")\n    implementation(\"com.squareup.okhttp3:okhttp:4.11.0\")\n    implementation(\"com.squareup.okhttp3:logging-interceptor:4.10.0\")\n\n    // Dagger - Hilt\n    implementation(\"com.google.dagger:hilt-android:2.49\")\n    kapt(\"com.google.dagger:hilt-compiler:2.44\")\n    kapt(\"androidx.hilt:hilt-compiler:1.2.0\")\n    implementation(\"androidx.hilt:hilt-navigation-compose:1.2.0\")\n\n    // Coroutines\n    implementation(\"org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3\")\n    implementation(\"org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3\")\n\n    // Coroutine Lifecycle Scopes\n    implementation(\"androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0\")\n    implementation(\"androidx.lifecycle:lifecycle-runtime-ktx:2.7.0\")\n\n    // System ui controller\n    implementation (\"com.google.accompanist:accompanist-systemuicontroller:0.27.0\")\n\n    //Paging 3\n    val paging_version = (\"3.1.1\")\n    implementation (\"androidx.paging:paging-runtime:$paging_version\")\n    implementation (\"androidx.paging:paging-compose:3.2.0-rc01\")\n\n    //Room\n    val room_version = (\"2.5.2\")\n    implementation (\"androidx.room:room-runtime:$room_version\")\n    kapt (\"androidx.room:room-compiler:$room_version\")\n    implementation (\"androidx.room:room-ktx:2.5.2\")\n\n    //Coil\n    implementation(\"io.coil-kt:coil-compose:2.4.0\")\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+--- a/app/build.gradle.kts	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/build.gradle.kts	(date 1714603125162)
+@@ -88,13 +88,6 @@
+     kapt("androidx.hilt:hilt-compiler:1.2.0")
+     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+ 
+-    // Coroutines
+-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+-
+-    // Coroutine Lifecycle Scopes
+-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
+-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+ 
+     // System ui controller
+     implementation ("com.google.accompanist:accompanist-systemuicontroller:0.27.0")
+Index: .idea/deploymentTargetDropDown.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/deploymentTargetDropDown.xml b/.idea/deploymentTargetDropDown.xml
+new file mode 100644
+--- /dev/null	(date 1714601914859)
++++ b/.idea/deploymentTargetDropDown.xml	(date 1714601914859)
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="deploymentTargetDropDown">
++    <value>
++      <entry key="DetailsScreenPreview">
++        <State />
++      </entry>
++      <entry key="app">
++        <State />
++      </entry>
++    </value>
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/compiler.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/compiler.xml b/.idea/compiler.xml
+new file mode 100644
+--- /dev/null	(date 1714601914800)
++++ b/.idea/compiler.xml	(date 1714601914800)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="CompilerConfiguration">
++    <bytecodeTargetLevel target="17" />
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/vcs.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/vcs.xml b/.idea/vcs.xml
+new file mode 100644
+--- /dev/null	(date 1714601914798)
++++ b/.idea/vcs.xml	(date 1714601914798)
+@@ -0,0 +1,6 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="VcsDirectoryMappings">
++    <mapping directory="$PROJECT_DIR$" vcs="Git" />
++  </component>
++</project>
+\ No newline at end of file
+Index: .idea/gradle.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/gradle.xml b/.idea/gradle.xml
+new file mode 100644
+--- /dev/null	(date 1714601969893)
++++ b/.idea/gradle.xml	(date 1714601969893)
+@@ -0,0 +1,19 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="GradleMigrationSettings" migrationVersion="1" />
++  <component name="GradleSettings">
++    <option name="linkedExternalProjectsSettings">
++      <GradleProjectSettings>
++        <option name="externalProjectPath" value="$PROJECT_DIR$" />
++        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
++        <option name="modules">
++          <set>
++            <option value="$PROJECT_DIR$" />
++            <option value="$PROJECT_DIR$/app" />
++          </set>
++        </option>
++        <option name="resolveExternalAnnotations" value="false" />
++      </GradleProjectSettings>
++    </option>
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkState.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkState.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkState.kt
+new file mode 100644
+--- /dev/null	(date 1714602986823)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkState.kt	(date 1714602986823)
+@@ -0,0 +1,7 @@
++package com.erenalparslan.newsapp.presentation.bookmark
++
++import com.erenalparslan.newsapp.domain.model.Article
++
++data class BookmarkState(
++    val articles: List<Article> = emptyList()
++)
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkScreen.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkScreen.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkScreen.kt
+new file mode 100644
+--- /dev/null	(date 1714602986841)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/bookmark/BookmarkScreen.kt	(date 1714602986841)
+@@ -0,0 +1,47 @@
++package com.erenalparslan.newsapp.presentation.bookmark
++
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.layout.statusBarsPadding
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.colorResource
++import androidx.compose.ui.text.font.FontWeight
++import com.erenalparslan.newsapp.Dimens.MediumPadding1
++import com.erenalparslan.newsapp.R
++import com.erenalparslan.newsapp.domain.model.Article
++import com.erenalparslan.newsapp.presentation.common.ArticlesList
++
++@Composable
++fun BookmarkScreen(
++    state: BookmarkState,
++    navigateToDetails: (Article) -> Unit
++) {
++    Column(
++        modifier = Modifier
++            .fillMaxWidth()
++            .statusBarsPadding()
++            .padding(top = MediumPadding1, start = MediumPadding1, end = MediumPadding1)
++    ) {
++
++        Text(
++            text = "Bookmark",
++            style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
++            color = colorResource(
++                id = R.color.text_title
++            )
++        )
++
++        Spacer(modifier = Modifier.height(MediumPadding1))
++
++        ArticlesList(
++            articles = state.articles,
++            onClick = navigateToDetails
++        )
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/di/MangerModule.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/di/MangerModule.kt b/app/src/main/java/com/erenalparslan/newsapp/di/MangerModule.kt
+new file mode 100644
+--- /dev/null	(date 1714603252025)
++++ b/app/src/main/java/com/erenalparslan/newsapp/di/MangerModule.kt	(date 1714603252025)
+@@ -0,0 +1,18 @@
++package com.erenalparslan.newsapp.di
++
++import com.erenalparslan.newsapp.data.manger.LocalUserMangerImpl
++import com.erenalparslan.newsapp.domain.manger.LocalUserManger
++import dagger.Binds
++import dagger.Module
++import dagger.hilt.InstallIn
++import dagger.hilt.components.SingletonComponent
++import javax.inject.Singleton
++
++@Module
++@InstallIn(SingletonComponent::class)
++abstract class MangerModule {
++
++    @Binds
++    @Singleton
++    abstract fun bindLocalUserManger(localUserMangerImpl: LocalUserMangerImpl) : LocalUserManger
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/di/RepositoryModule.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/di/RepositoryModule.kt b/app/src/main/java/com/erenalparslan/newsapp/di/RepositoryModule.kt
+new file mode 100644
+--- /dev/null	(date 1714602986838)
++++ b/app/src/main/java/com/erenalparslan/newsapp/di/RepositoryModule.kt	(date 1714602986838)
+@@ -0,0 +1,19 @@
++package com.erenalparslan.newsapp.di
++
++import com.erenalparslan.newsapp.data.repository.NewsRepositoryImpl
++import com.erenalparslan.newsapp.domain.repository.NewsRepository
++import dagger.Binds
++import dagger.Module
++import dagger.hilt.InstallIn
++import dagger.hilt.components.SingletonComponent
++import javax.inject.Singleton
++
++@Module
++@InstallIn(SingletonComponent::class)
++abstract class RepositoryModule {
++
++    @Binds
++    @Singleton
++    abstract fun bindNewsRepository(newsRepositoryImpl: NewsRepositoryImpl): NewsRepository
++
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/di/AppModule.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/di/AppModule.kt b/app/src/main/java/com/erenalparslan/newsapp/di/AppModule.kt
+new file mode 100644
+--- /dev/null	(date 1714602986821)
++++ b/app/src/main/java/com/erenalparslan/newsapp/di/AppModule.kt	(date 1714602986821)
+@@ -0,0 +1,54 @@
++package com.erenalparslan.newsapp.di
++
++import android.app.Application
++import androidx.room.Room
++import com.erenalparslan.newsapp.data.local.NewsDao
++import com.erenalparslan.newsapp.data.local.NewsDatabase
++import com.erenalparslan.newsapp.data.local.NewsTypeConvertor
++import com.erenalparslan.newsapp.data.remote.NewsApi
++import com.erenalparslan.newsapp.util.Constans.BASE_URL
++import dagger.Module
++import dagger.Provides
++import dagger.hilt.InstallIn
++import dagger.hilt.components.SingletonComponent
++import retrofit2.Retrofit
++import retrofit2.converter.gson.GsonConverterFactory
++import javax.inject.Singleton
++
++@Module
++@InstallIn(SingletonComponent::class)
++object AppModule {
++
++
++    @Provides
++    @Singleton
++    fun provideApiInstance(): NewsApi {
++        return Retrofit
++            .Builder()
++            .baseUrl(BASE_URL)
++            .addConverterFactory(GsonConverterFactory.create())
++            .build()
++            .create(NewsApi::class.java)
++    }
++
++    @Provides
++    @Singleton
++    fun provideNewsDatabase(
++        application: Application
++    ): NewsDatabase {
++        return Room.databaseBuilder(
++            context = application,
++            klass = NewsDatabase::class.java,
++            name = "news_db"
++        ).addTypeConverter(NewsTypeConvertor())
++            .fallbackToDestructiveMigration()
++            .build()
++    }
++
++    @Provides
++    @Singleton
++    fun provideNewsDao(
++        newsDatabase: NewsDatabase
++    ): NewsDao = newsDatabase.newsDao
++
++}
+\ No newline at end of file
+Index: .idea/.gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/.gitignore b/.idea/.gitignore
+new file mode 100644
+--- /dev/null	(date 1714601928474)
++++ b/.idea/.gitignore	(date 1714601928474)
+@@ -0,0 +1,3 @@
++# Default ignored files
++/shelf/
++/workspace.xml
+Index: .idea/inspectionProfiles/Project_Default.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/inspectionProfiles/Project_Default.xml b/.idea/inspectionProfiles/Project_Default.xml
+new file mode 100644
+--- /dev/null	(date 1714601914565)
++++ b/.idea/inspectionProfiles/Project_Default.xml	(date 1714601914565)
+@@ -0,0 +1,41 @@
++<component name="InspectionProjectProfileManager">
++  <profile version="1.0">
++    <option name="myName" value="Project Default" />
++    <inspection_tool class="PreviewAnnotationInFunctionWithParameters" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewApiLevelMustBeValid" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewDimensionRespectsLimit" enabled="true" level="WARNING" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewFontScaleMustBeGreaterThanZero" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewMultipleParameterProviders" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewMustBeTopLevelFunction" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewNeedsComposableAnnotation" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewNotSupportedInUnitTestFiles" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++    <inspection_tool class="PreviewPickerAnnotation" enabled="true" level="ERROR" enabled_by_default="true">
++      <option name="composableFile" value="true" />
++      <option name="previewFile" value="true" />
++    </inspection_tool>
++  </profile>
++</component>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/data/manger/LocalUserMangerImpl.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/data/manger/LocalUserMangerImpl.kt b/app/src/main/java/com/erenalparslan/newsapp/data/manger/LocalUserMangerImpl.kt
+new file mode 100644
+--- /dev/null	(date 1714602986825)
++++ b/app/src/main/java/com/erenalparslan/newsapp/data/manger/LocalUserMangerImpl.kt	(date 1714602986825)
+@@ -0,0 +1,40 @@
++package com.erenalparslan.newsapp.data.manger
++
++import android.app.Application
++import android.content.Context
++import androidx.datastore.core.DataStore
++import androidx.datastore.preferences.core.Preferences
++import androidx.datastore.preferences.core.booleanPreferencesKey
++import androidx.datastore.preferences.core.edit
++import androidx.datastore.preferences.preferencesDataStore
++import com.erenalparslan.newsapp.domain.manger.LocalUserManger
++import com.erenalparslan.newsapp.util.Constans
++import com.erenalparslan.newsapp.util.Constans.USER_SETTINGS
++import kotlinx.coroutines.flow.Flow
++import kotlinx.coroutines.flow.map
++import javax.inject.Inject
++
++class LocalUserMangerImpl @Inject constructor(
++    private val application: Application
++) : LocalUserManger {
++
++    override suspend fun saveAppEntry() {
++        application.dataStore.edit { settings ->
++            settings[PreferenceKeys.APP_ENTRY] = true
++        }
++    }
++
++    override fun readAppEntry(): Flow<Boolean> {
++        return application.dataStore.data.map { preferences ->
++            preferences[PreferenceKeys.APP_ENTRY] ?: false
++        }
++    }
++}
++
++private val readOnlyProperty = preferencesDataStore(name = USER_SETTINGS)
++
++val Context.dataStore: DataStore<Preferences> by readOnlyProperty
++
++private object PreferenceKeys {
++    val APP_ENTRY = booleanPreferencesKey(Constans.APP_ENTRY)
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/components/NewsBottomNavigation.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/components/NewsBottomNavigation.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/components/NewsBottomNavigation.kt
+new file mode 100644
+--- /dev/null	(date 1714602986829)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/components/NewsBottomNavigation.kt	(date 1714602986829)
+@@ -0,0 +1,82 @@
++package com.erenalparslan.newsapp.presentation.news_navigator.components
++
++import android.content.res.Configuration.UI_MODE_NIGHT_YES
++import androidx.annotation.DrawableRes
++import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.Spacer
++import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.size
++import androidx.compose.material3.Icon
++import androidx.compose.material3.MaterialTheme
++import androidx.compose.material3.NavigationBar
++import androidx.compose.material3.NavigationBarItem
++import androidx.compose.material3.NavigationBarItemDefaults
++import androidx.compose.material3.Text
++import androidx.compose.runtime.Composable
++import androidx.compose.ui.Alignment.Companion.CenterHorizontally
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.res.colorResource
++import androidx.compose.ui.res.painterResource
++import androidx.compose.ui.tooling.preview.Preview
++import androidx.compose.ui.unit.dp
++import com.erenalparslan.newsapp.Dimens.ExtraSmallPadding2
++import com.erenalparslan.newsapp.Dimens.IconSize
++import com.erenalparslan.newsapp.R
++import com.erenalparslan.newsapp.ui.theme.NewsAppTheme
++
++@Composable
++fun NewsBottomNavigation(
++    items: List<BottomNavigationItem>,
++    selectedItem: Int,
++    onItemClick: (Int) -> Unit
++) {
++    NavigationBar(
++        modifier = Modifier.fillMaxWidth(),
++        containerColor = MaterialTheme.colorScheme.background,
++        tonalElevation = 10.dp
++    ) {
++        items.forEachIndexed { index, item ->
++            NavigationBarItem(
++                selected = index == selectedItem,
++                onClick = { onItemClick(index) },
++                icon = {
++                    Column(horizontalAlignment = CenterHorizontally) {
++                        Icon(
++                            painter = painterResource(id = item.icon),
++                            contentDescription = null,
++                            modifier = Modifier.size(IconSize),
++                        )
++                        Spacer(modifier = Modifier.height(ExtraSmallPadding2))
++                        Text(text = item.text, style = MaterialTheme.typography.labelSmall)
++                    }
++                },
++                colors = NavigationBarItemDefaults.colors(
++                    selectedIconColor = MaterialTheme.colorScheme.primary,
++                    selectedTextColor = MaterialTheme.colorScheme.primary,
++                    unselectedIconColor = colorResource(id = R.color.body),
++                    unselectedTextColor = colorResource(id = R.color.body),
++                    indicatorColor = MaterialTheme.colorScheme.background
++                ),
++            )
++        }
++    }
++}
++
++data class BottomNavigationItem(
++    @DrawableRes val icon: Int,
++    val text: String
++)
++
++@Preview
++@Preview(uiMode = UI_MODE_NIGHT_YES)
++@Composable
++fun NewsBottomNavigationPreview() {
++    NewsAppTheme(dynamicColor = false) {
++        NewsBottomNavigation(items = listOf(
++            BottomNavigationItem(icon = R.drawable.ic_home, text = "Home"),
++            BottomNavigationItem(icon = R.drawable.ic_search, text = "Search"),
++            BottomNavigationItem(icon = R.drawable.ic_bookmark, text = "Bookmark"),
++        ), selectedItem = 0, onItemClick = {})
++    }
++}
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/NewsNavigator.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/NewsNavigator.kt b/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/NewsNavigator.kt
+new file mode 100644
+--- /dev/null	(date 1714603680020)
++++ b/app/src/main/java/com/erenalparslan/newsapp/presentation/news_navigator/NewsNavigator.kt	(date 1714603680020)
+@@ -0,0 +1,192 @@
++package com.erenalparslan.newsapp.presentation.news_navigator
++
++import androidx.activity.compose.BackHandler
++import androidx.compose.foundation.layout.fillMaxSize
++import androidx.compose.foundation.layout.padding
++import androidx.compose.material3.ExperimentalMaterial3Api
++import androidx.compose.material3.Scaffold
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.saveable.rememberSaveable
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Modifier
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.navigation.NavController
++import androidx.navigation.compose.NavHost
++import androidx.navigation.compose.composable
++import androidx.navigation.compose.currentBackStackEntryAsState
++import androidx.navigation.compose.rememberNavController
++import androidx.paging.compose.collectAsLazyPagingItems
++import com.erenalparslan.newsapp.R
++import com.erenalparslan.newsapp.domain.model.Article
++import com.erenalparslan.newsapp.presentation.bookmark.BookmarkScreen
++import com.erenalparslan.newsapp.presentation.bookmark.BookmarkViewModel
++import com.erenalparslan.newsapp.presentation.details.DetailsViewModel
++import com.erenalparslan.newsapp.presentation.home.HomeViewModel
++import com.erenalparslan.newsapp.presentation.news_navigator.components.BottomNavigationItem
++import com.erenalparslan.newsapp.presentation.news_navigator.components.NewsBottomNavigation
++import com.erenalparslan.newsapp.presentation.search.SearchViewModel
++import com.erenalparslan.newsapp.presentation.details.DetailsScreen
++import com.erenalparslan.newsapp.presentation.home.HomeScreen
++import com.loc.newsapp.presentation.navgraph.Route
++import com.erenalparslan.newsapp.presentation.search.SearchScreen
++
++@OptIn(ExperimentalMaterial3Api::class)
++@Composable
++fun NewsNavigator() {
++
++    val bottomNavigationItems = remember {
++        listOf(
++            BottomNavigationItem(icon = R.drawable.ic_home, text = "Home"),
++            BottomNavigationItem(icon = R.drawable.ic_search, text = "Search"),
++            BottomNavigationItem(icon = R.drawable.ic_bookmark, text = "Bookmark"),
++        )
++    }
++
++    val navController = rememberNavController()
++    val backStackState = navController.currentBackStackEntryAsState().value
++    var selectedItem by rememberSaveable {
++        mutableStateOf(0)
++    }
++    selectedItem = when (backStackState?.destination?.route) {
++        Route.HomeScreen.route -> 0
++        Route.SearchScreen.route -> 1
++        Route.BookmarkScreen.route -> 2
++        else -> 0
++    }
++
++    //Hide the bottom navigation when the user is in the details screen
++    val isBottomBarVisible = remember(key1 = backStackState) {
++        backStackState?.destination?.route == Route.HomeScreen.route ||
++                backStackState?.destination?.route == Route.SearchScreen.route ||
++                backStackState?.destination?.route == Route.BookmarkScreen.route
++    }
++
++
++    Scaffold(modifier = Modifier.fillMaxSize(), bottomBar = {
++        if (isBottomBarVisible) {
++            NewsBottomNavigation(
++                items = bottomNavigationItems,
++                selectedItem = selectedItem,
++                onItemClick = { index ->
++                    when (index) {
++                        0 -> navigateToTab(
++                            navController = navController,
++                            route = Route.HomeScreen.route
++                        )
++
++                        1 -> navigateToTab(
++                            navController = navController,
++                            route = Route.SearchScreen.route
++                        )
++
++                        2 -> navigateToTab(
++                            navController = navController,
++                            route = Route.BookmarkScreen.route
++                        )
++                    }
++                }
++            )
++        }
++    }) {
++        val bottomPadding = it.calculateBottomPadding()
++        NavHost(
++            navController = navController,
++            startDestination = Route.HomeScreen.route,
++            modifier = Modifier.padding(bottom = bottomPadding)
++        ) {
++            composable(route = Route.HomeScreen.route) { backStackEntry ->
++                val viewModel: HomeViewModel = hiltViewModel()
++                val articles = viewModel.news.collectAsLazyPagingItems()
++                HomeScreen(
++                    articles = articles,
++                    navigateToSearch = {
++                        navigateToTab(
++                            navController = navController,
++                            route = Route.SearchScreen.route
++                        )
++                    },
++                    navigateToDetails = { article ->
++                        navigateToDetails(
++                            navController = navController,
++                            article = article
++                        )
++                    }
++                )
++            }
++            composable(route = Route.SearchScreen.route) {
++                val viewModel: SearchViewModel = hiltViewModel()
++                val state = viewModel.state.value
++                OnBackClickStateSaver(navController = navController)
++                SearchScreen(
++                    state = state,
++                    event = viewModel::onEvent,
++                    navigateToDetails = { article ->
++                        navigateToDetails(
++                            navController = navController,
++                            article = article
++                        )
++                    }
++                )
++            }
++            composable(route = Route.DetailsScreen.route) {
++                val viewModel: DetailsViewModel = hiltViewModel()
++                navController.previousBackStackEntry?.savedStateHandle?.get<Article?>("article")
++                    ?.let { article ->
++                        DetailsScreen(
++                            article = article,
++                            event = viewModel::onEvent,
++                            navigateUp = { navController.navigateUp() },
++                            sideEffect = viewModel.sideEffect
++                        )
++                    }
++
++            }
++            composable(route = Route.BookmarkScreen.route) {
++                val viewModel: BookmarkViewModel = hiltViewModel()
++                val state = viewModel.state.value
++                OnBackClickStateSaver(navController = navController)
++                BookmarkScreen(
++                    state = state,
++                    navigateToDetails = { article ->
++                        navigateToDetails(
++                            navController = navController,
++                            article = article
++                        )
++                    }
++                )
++            }
++        }
++    }
++}
++
++@Composable
++fun OnBackClickStateSaver(navController: NavController) {
++    BackHandler(true) {
++        navigateToTab(
++            navController = navController,
++            route = Route.HomeScreen.route
++        )
++    }
++}
++
++private fun navigateToTab(navController: NavController, route: String) {
++    navController.navigate(route) {
++        navController.graph.startDestinationRoute?.let { screen_route ->
++            popUpTo(screen_route) {
++                saveState = true
++            }
++        }
++        launchSingleTop = true
++        restoreState = true
++    }
++}
++
++private fun navigateToDetails(navController: NavController, article: Article) {
++    navController.currentBackStackEntry?.savedStateHandle?.set("article", article)
++    navController.navigate(
++        route = Route.DetailsScreen.route
++    )
++}
+\ No newline at end of file
+Index: .idea/misc.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.idea/misc.xml b/.idea/misc.xml
+new file mode 100644
+--- /dev/null	(date 1714601914794)
++++ b/.idea/misc.xml	(date 1714601914794)
+@@ -0,0 +1,10 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<project version="4">
++  <component name="ExternalStorageConfigurationManager" enabled="true" />
++  <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="jbr-17" project-jdk-type="JavaSDK">
++    <output url="file://$PROJECT_DIR$/build/classes" />
++  </component>
++  <component name="ProjectType">
++    <option name="id" value="Android" />
++  </component>
++</project>
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/SaveAppEntryUseCase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.domain.usecase.app_enty\n\nimport com.erenalparslan.newsapp.domain.LocalManager\n\nclass SaveAppEntryUseCase(private val localManager: LocalManager) {\n\n    suspend operator fun invoke(){\n        localManager.saveUserEntry()\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/SaveAppEntryUseCase.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/SaveAppEntryUseCase.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/SaveAppEntryUseCase.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/SaveAppEntryUseCase.kt	(date 1714603252036)
+@@ -1,10 +1,10 @@
+ package com.erenalparslan.newsapp.domain.usecase.app_enty
+ 
+-import com.erenalparslan.newsapp.domain.LocalManager
++import com.erenalparslan.newsapp.domain.manger.LocalUserManger
+ 
+-class SaveAppEntryUseCase(private val localManager: LocalManager) {
++class SaveAppEntryUseCase(private val localManager: LocalUserManger) {
+ 
+     suspend operator fun invoke(){
+-        localManager.saveUserEntry()
++        localManager.saveAppEntry()
+     }
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/ReadAppEntryUseCase.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.erenalparslan.newsapp.domain.usecase.app_enty\n\nimport com.erenalparslan.newsapp.domain.LocalManager\nimport kotlinx.coroutines.flow.Flow\n\nclass ReadAppEntryUseCase(private val localManager: LocalManager) {\n\n     operator fun invoke(): Flow<Boolean> {\n        return localManager.readUserEntry()\n    }\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/ReadAppEntryUseCase.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/ReadAppEntryUseCase.kt
+--- a/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/ReadAppEntryUseCase.kt	(revision d2ebb99895b4579d41378e51203403aabd352fbf)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/usecase/app_enty/ReadAppEntryUseCase.kt	(date 1714603252033)
+@@ -1,11 +1,11 @@
+ package com.erenalparslan.newsapp.domain.usecase.app_enty
+ 
+-import com.erenalparslan.newsapp.domain.LocalManager
++import com.erenalparslan.newsapp.domain.manger.LocalUserManger
+ import kotlinx.coroutines.flow.Flow
+ 
+-class ReadAppEntryUseCase(private val localManager: LocalManager) {
++class ReadAppEntryUseCase(private val localManager: LocalUserManger) {
+ 
+      operator fun invoke(): Flow<Boolean> {
+-        return localManager.readUserEntry()
++        return localManager.readAppEntry()
+     }
+ }
+\ No newline at end of file
+Index: app/src/main/java/com/erenalparslan/newsapp/domain/manger/LocalUserManger.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/erenalparslan/newsapp/domain/manger/LocalUserManger.kt b/app/src/main/java/com/erenalparslan/newsapp/domain/manger/LocalUserManger.kt
+new file mode 100644
+--- /dev/null	(date 1714602986843)
++++ b/app/src/main/java/com/erenalparslan/newsapp/domain/manger/LocalUserManger.kt	(date 1714602986843)
+@@ -0,0 +1,11 @@
++package com.erenalparslan.newsapp.domain.manger
++
++import kotlinx.coroutines.flow.Flow
++
++interface LocalUserManger {
++
++    suspend fun saveAppEntry()
++
++    fun readAppEntry(): Flow<Boolean>
++
++}
+\ No newline at end of file
+Index: app/src/main/res/drawable/ic_close.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_close.xml b/app/src/main/res/drawable/ic_close.xml
+new file mode 100644
+--- /dev/null	(date 1688639494000)
++++ b/app/src/main/res/drawable/ic_close.xml	(date 1688639494000)
+@@ -0,0 +1,9 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="13dp"
++    android:height="14dp"
++    android:viewportWidth="13"
++    android:viewportHeight="14">
++  <path
++      android:pathData="M6.5,5.586L11.45,0.636L12.864,2.05L7.914,7L12.864,11.95L11.45,13.364L6.5,8.414L1.55,13.364L0.136,11.95L5.086,7L0.136,2.05L1.55,0.636L6.5,5.586Z"
++      android:fillColor="#B0B3B8"/>
++</vector>
+Index: app/src/main/res/drawable/ic_home.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_home.xml b/app/src/main/res/drawable/ic_home.xml
+new file mode 100644
+--- /dev/null	(date 1688639494000)
++++ b/app/src/main/res/drawable/ic_home.xml	(date 1688639494000)
+@@ -0,0 +1,9 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="18dp"
++    android:height="19dp"
++    android:viewportWidth="18"
++    android:viewportHeight="19">
++  <path
++      android:pathData="M10,17H16V7.978L9,2.534L2,7.978V17H8V11H10V17ZM18,18C18,18.265 17.895,18.52 17.707,18.707C17.52,18.895 17.265,19 17,19H1C0.735,19 0.48,18.895 0.293,18.707C0.105,18.52 0,18.265 0,18V7.49C-0,7.338 0.035,7.187 0.102,7.05C0.168,6.913 0.266,6.794 0.386,6.7L8.386,0.478C8.562,0.341 8.778,0.267 9,0.267C9.222,0.267 9.438,0.341 9.614,0.478L17.614,6.7C17.734,6.794 17.832,6.913 17.899,7.05C17.965,7.187 18,7.338 18,7.49V18Z"
++      android:fillColor="#4E4B66"/>
++</vector>
+Index: app/src/main/res/drawable/ic_bookmark.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/res/drawable/ic_bookmark.xml b/app/src/main/res/drawable/ic_bookmark.xml
+new file mode 100644
+--- /dev/null	(date 1688639494000)
++++ b/app/src/main/res/drawable/ic_bookmark.xml	(date 1688639494000)
+@@ -0,0 +1,9 @@
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:width="16dp"
++    android:height="21dp"
++    android:viewportWidth="16"
++    android:viewportHeight="21">
++  <path
++      android:pathData="M1,0H15C15.265,0 15.52,0.105 15.707,0.293C15.895,0.48 16,0.735 16,1V20.143C16,20.232 15.976,20.32 15.931,20.397C15.885,20.474 15.82,20.538 15.742,20.581C15.664,20.624 15.575,20.646 15.486,20.643C15.397,20.641 15.31,20.615 15.234,20.567L8,16.03L0.766,20.566C0.69,20.614 0.603,20.64 0.514,20.642C0.425,20.645 0.336,20.624 0.258,20.58C0.18,20.537 0.115,20.474 0.069,20.397C0.024,20.32 0,20.232 0,20.143V1C0,0.735 0.105,0.48 0.293,0.293C0.48,0.105 0.735,0 1,0ZM14,2H2V17.432L8,13.671L14,17.432V2Z"
++      android:fillColor="#4E4B66"/>
++</vector>

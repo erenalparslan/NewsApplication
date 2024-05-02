@@ -1,4 +1,4 @@
-package com.loc.newsapp.presentation.search
+package com.erenalparslan.newsapp.presentation.search
 
 sealed class SearchEvent {
 

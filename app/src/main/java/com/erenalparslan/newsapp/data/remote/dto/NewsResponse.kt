@@ -1,4 +1,4 @@
-package com.loc.newsapp.data.remote.dto
+package com.erenalparslan.newsapp.data.remote.dto
 
 import com.erenalparslan.newsapp.domain.model.Article
 

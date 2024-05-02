@@ -4,21 +4,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.cachedIn
-import com.erenalparslan.newsapp.domain.usecase.news.NewsUseCases
-import com.loc.newsapp.presentation.home.HomeState
+import com.erenalparslan.newsapp.domain.usecases.news.GetNews
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val newsUseCases: NewsUseCases
+    private val getNewsUseCase: GetNews
 ): ViewModel() {
 
     var state = mutableStateOf(HomeState())
         private set
 
-    val news = newsUseCases.getNews(
-        source = listOf("bbc-news","abc-news","al-jazeera-english")
+    val news = getNewsUseCase(
+        sources = listOf("bbc-news","abc-news","al-jazeera-english")
     ).cachedIn(viewModelScope)
 
 }
